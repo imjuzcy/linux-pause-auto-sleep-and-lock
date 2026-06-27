@@ -98,19 +98,65 @@ def set_inhibit(inhibitor: str, reason: str):
     logging.info("Reason: %s" % reason)
 
 
+def send_notification(block: bool, inhibitor: str, reason: str):
+    """Send notification about blocking
+
+    Args:
+        block (bool): True for block activated, False for block dismissed
+    """
+    bus = dbus.SessionBus()
+    notify_object = bus.get_object(
+        "org.freedesktop.Notifications",
+        "/org/freedesktop/Notifications"
+    )
+    
+    notify = dbus.Interface(
+        notify_object,
+        "org.freedesktop.Notifications"
+    )
+
+    if block:
+        my_inhibitor = inhibitor
+        my_reason = reason
+        my_summary = "Sleep and Screen Locking Blocked"
+    else:
+        my_inhibitor = inhibitor
+        my_reason = ""
+        my_summary = "Sleep and Screen Locking Unblocked"
+    
+    notification_id = notify.Notify(
+        my_inhibitor,
+        0,
+        "",
+        my_summary,
+        my_reason,
+        [],
+        {},
+        -1
+    )
+    
+    logging.info("Sent notification ID: %d" % notification_id)
+
+
 last_pid = get_instance_pid()
 current_pid = str(os.getpid())
 logging.debug(f"existing: {last_pid}  current: {current_pid}")
 logging.debug(f"args: {sys.argv[1:]}")
 # kill existing if exists when there's no arguments
 if last_pid != current_pid and len(sys.argv) < 2:
+    if len(sys.argv) > 1:
+        inhibitor, reason = " ".join(sys.argv[1:2]), " ".join(sys.argv[2:])
+    else:
+        inhibitor, reason = "User", "Manually enabled"
     kill_existing(last_pid)
+    send_notification(False, inhibitor, reason)
 else:
     if len(sys.argv) > 1:
         inhibitor, reason = " ".join(sys.argv[1:2]), " ".join(sys.argv[2:])
     else:
         inhibitor, reason = "User", "Manually enabled"
     set_inhibit(inhibitor, reason)
+    send_notification(True, inhibitor, reason)
     # Wait until termination
     signal.signal(signal.SIGINT, exit_message)
     signal.pause()
