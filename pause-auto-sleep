@@ -147,7 +147,7 @@ if last_pid != current_pid and len(sys.argv) < 2:
     if len(sys.argv) > 1:
         inhibitor, reason = " ".join(sys.argv[1:2]), " ".join(sys.argv[2:])
     else:
-        inhibitor, reason = "User", "Manually enabled"
+        inhibitor, reason = "User", "Manually disabled"
     kill_existing(last_pid)
     send_notification(False, inhibitor, reason)
 else:
